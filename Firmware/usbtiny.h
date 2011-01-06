@@ -23,11 +23,11 @@
 
 // Optional definition of the I/O pin to control the 1K5 pullup of the
 // D- signal. This will force a reconnect after RESET. (+4 bytes)
-//#define	USBTINY_DMINUS_PULLUP		(D,3)
+#define	USBTINY_DMINUS_PULLUP		(D,5)
 
 // Optional definition of the I/O pin to drive the "USB OK" LED, that
 // will turn on when the host has assigned a device address. (+6 bytes)
-//#define	USBTINY_USB_OK_LED		(D,6)
+#define	USBTINY_USB_OK_LED		(D,6)
 
 // The power requirement of the USB device in mA, or 0 when the device
 // is not bus powered:

@@ -53,9 +53,6 @@ int	main ( void )
 {
 	usb_init();
 
-	OUTPUT(LED);
-	SET(LED);
-
 	for	( ;; )
 	{
 		usb_poll();
