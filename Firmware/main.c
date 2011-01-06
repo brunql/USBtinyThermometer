@@ -5,12 +5,14 @@
  *       Author: Mike Shatohin (brunql)
  *
  *      Project: USBtinyThermometer
- *          MCU: ATtiny2313
+ *          MCU: ATtiny44
  *        Clock: 12MHz
  *
  *  Command to fill flash and set fuses:
- *  $ avrdude  -pt2313 -cusbasp -u -Uflash:w:USBtinyThermometer.hex:a -Ulfuse:w:0xfe:m -Uhfuse:w:0xd9:m -Uefuse:w:0xff:m
- *
+ *  $ avrdude  -pt44 -cusbasp -u -Uflash:w:USBtinyThermometer.hex:a
+
+ TODO: fuse bits
+
  *  Copyright (c) 2010, 2011 Mike Shatohin, mikeshatohin [at] gmail.com
  *
  *  USBtinyThermometer is free software: you can redistribute it and/or modify

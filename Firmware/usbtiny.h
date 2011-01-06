@@ -10,9 +10,9 @@
 // The D+ and D- USB signals should be connected to two pins of the same
 // I/O port. The following macros define the port letter and the input
 // bit numbers:
-#define	USBTINY_PORT			D
-#define	USBTINY_DPLUS			2
-#define	USBTINY_DMINUS			4
+#define	USBTINY_PORT			A
+#define	USBTINY_DPLUS			1
+#define	USBTINY_DMINUS			0
 
 // The D+ signal should be connected to an interrupt input to trigger an
 // interrupt at the start of a packet. When you use the same pin for the
@@ -23,11 +23,11 @@
 
 // Optional definition of the I/O pin to control the 1K5 pullup of the
 // D- signal. This will force a reconnect after RESET. (+4 bytes)
-#define	USBTINY_DMINUS_PULLUP		(D,5)
+#define	USBTINY_DMINUS_PULLUP		(A,2)
 
 // Optional definition of the I/O pin to drive the "USB OK" LED, that
 // will turn on when the host has assigned a device address. (+6 bytes)
-#define	USBTINY_USB_OK_LED		(D,6)
+#define	USBTINY_USB_OK_LED		(A,7)
 
 // The power requirement of the USB device in mA, or 0 when the device
 // is not bus powered:

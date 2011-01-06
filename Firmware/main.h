@@ -32,6 +32,6 @@
 #ifndef MAIN_H_
 #define MAIN_H_
 
-#define LED      (D,6)
+#define LED      (A,7)
 
 #endif /* MAIN_H_ */
