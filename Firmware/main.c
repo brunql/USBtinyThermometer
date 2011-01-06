@@ -28,10 +28,12 @@
  *
  */
 
-
+#include <util/delay.h>
 #include "usb.h"
 #include "main.h"
 #include "def.h"
+#include "onewire.h"
+#include "ds18x20.h"
 
 
 byte_t	usb_setup ( byte_t data[8] )
@@ -46,11 +48,26 @@ byte_t	usb_in ( byte_t* data, byte_t len )
 
 void	usb_out ( byte_t* data, byte_t len )
 {
+    TOGGLE(LED);
+    for(uint8_t i=0; i<len; i++){
+        data[i] = 0xff - i;
+    }
+    TOGGLE(LED);
 }
 
 
 int	main ( void )
 {
+    uint8_t diff = OW_SEARCH_FIRST;
+
+    uint8_t sensorID[OW_ROMCODE_SIZE];
+    uint8_t sp[DS18X20_SP_SIZE];
+
+    DS18X20_find_sensor(&diff, sensorID);
+    DS18X20_start_meas();
+    _delay_ms(DS18B20_TCONV_12BIT);
+    DS18X20_read_scratchpad(sensorID, sp, DS18X20_SP_SIZE);
+
 	usb_init();
 
 	for	( ;; )
