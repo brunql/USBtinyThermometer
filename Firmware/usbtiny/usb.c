@@ -374,6 +374,10 @@ extern	void	usb_init ( void )
 {
 	USB_INT_CONFIG |= USB_INT_CONFIG_SET;
 	USB_INT_ENABLE |= (1 << USB_INT_ENABLE_BIT);
+
+	// brunql edited: added intializing PCMSK0 register
+	PCMSK0 = (1 << PCINT1);
+
 #ifdef	USBTINY_USB_OK_LED
 	OUTPUT(USBTINY_USB_OK_LED);
 #endif

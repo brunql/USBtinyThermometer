@@ -7,6 +7,12 @@
 // Public License as published by the Free Software Foundation.
 // ======================================================================
 
+// ----------------------------------------------------------------------
+// brunql edited:
+//      Interrupts source change to PCINT0_vect and PCINT1 pin
+// ----------------------------------------------------------------------
+
+
 #ifdef __ASSEMBLER__
 #define	__SFR_OFFSET		0
 #endif
@@ -39,7 +45,8 @@
 #if	defined SIG_INT0
 #  define USB_INT_VECTOR	CAT2(SIG_INT, USBTINY_INT)
 #else
-#  define USB_INT_VECTOR	CAT2(SIG_INTERRUPT, USBTINY_INT)
+// brunql edited: SIG_INTERRUPT to SIG_PIN_CHANGE
+#  define USB_INT_VECTOR	CAT2(SIG_PIN_CHANGE, USBTINY_INT)
 #endif
 
 // Interrupt enable
@@ -50,7 +57,8 @@
 #else
 #  define USB_INT_ENABLE	GICR
 #endif
-#define	USB_INT_ENABLE_BIT	CAT2(INT,USBTINY_INT)
+// brunql edited: INT to PCIE
+#define	USB_INT_ENABLE_BIT	CAT2(PCIE,USBTINY_INT)
 
 // Interrupt pending bit
 #if	defined	EIFR
@@ -58,7 +66,8 @@
 #else
 #  define USB_INT_PENDING	GIFR
 #endif
-#define	USB_INT_PENDING_BIT	CAT2(INTF,USBTINY_INT)
+// brunql edited: INTF to PCIF
+#define	USB_INT_PENDING_BIT	CAT2(PCIF,USBTINY_INT)
 #if	defined INF0 && ! defined INTF0
 #  define	INTF0		INF0	// fix for incorrect definition in iotn13.h
 #endif
