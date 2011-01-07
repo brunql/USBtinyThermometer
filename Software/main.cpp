@@ -46,7 +46,7 @@ static void printUsage()
     fprintf(stderr, "Project on github: https://github.com/brunql/USBtinyThermometer\n");
     fprintf(stderr, "Copyleft (c) 2011\n");
     fprintf(stderr, "\n");
-    fprintf(stderr, "Usage: USBtinyThermometer [-h]\n");
+    fprintf(stderr, "Usage: USBtinyThermometer [-v] [-h]\n");
     fprintf(stderr, "  -h, --help       show this help\n");
     fprintf(stderr, "  -v, --verbose    vebose output\n");
     fprintf(stderr, "\n");
@@ -70,13 +70,16 @@ int main(int argc, char **argv)
     usb_dev_handle *handle = NULL;
     int result = 0;
 
-    if(argc > 3){
+    if(argc > 2){
         printUsage();
         exit(1);
     }else if(argc == 2){
         if((strcmp(argv[1], "-v") == 0) ||
            (strcmp(argv[1], "--verbose") == 0)){
             verbose = 1;
+        }else{
+            printUsage();
+            exit(1);
         }
     }
 
@@ -138,9 +141,9 @@ int main(int argc, char **argv)
     }
 
     if(verbose){
-        // print buffer to stdout
+        fprintf(stdout, "Buffer: ");
         for(int i = 0; i<sizeof(buffer); i++){
-            fprintf(stdout, "%x ", buffer[i] & 0xff);
+            fprintf(stdout, "0x%02x ", buffer[i] & 0xff);
         }
         fprintf(stdout, "\n");
         fflush(stdout);
