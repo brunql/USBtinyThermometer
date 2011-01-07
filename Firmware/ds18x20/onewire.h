@@ -22,7 +22,7 @@ extern "C" {
 
 #ifdef OW_ONE_BUS
 
-#define OW_PIN  PB0
+#define OW_PIN  PB2
 #define OW_IN   PINB
 #define OW_OUT  PORTB
 #define OW_DDR  DDRB
@@ -43,7 +43,7 @@ extern "C" {
 // 30u secs seem to be reliable for longer lines
 //#define OW_RECOVERY_TIME        5  /* usec */
 //#define OW_RECOVERY_TIME      300 /* usec */
-#define OW_RECOVERY_TIME         10 /* usec */
+#define OW_RECOVERY_TIME         16 /* usec */
 
 // Use AVR's internal pull-up resistor instead of external 4,7k resistor.
 // Based on information from Sascha Schade. Experimental but worked in tests

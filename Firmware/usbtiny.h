@@ -7,6 +7,15 @@
 // Public License as published by the Free Software Foundation.
 // ======================================================================
 
+// ------------------------------------------------------------------------------ //
+// Date: 7.01.11
+// Edited by Mike Shatohin (mikeshatohin@gmail.com)
+// Project: USBtinyThermometer
+// Changes:
+//      pinout for ATtiny44
+//      using PCINT1 pin as interrupt source
+// ------------------------------------------------------------------------------ //
+
 // The D+ and D- USB signals should be connected to two pins of the same
 // I/O port. The following macros define the port letter and the input
 // bit numbers:
@@ -69,13 +78,13 @@
 // as 1, you have the option of returning 0xff instead. In that case, the
 // USB driver will call a function usb_in() to obtain the data to send
 // back to the host. This can be used to generate the data on-the-fly.
-#define	USBTINY_CALLBACK_IN		0
+#define	USBTINY_CALLBACK_IN	    1
 
 // When this macro is defined as 0, OUT packets are simply ignored.
 // When defined as 1, the function usb_out() is called for OUT packets.
 // You need this option to send data from the host to the device in
 // a control transfer.
-#define	USBTINY_CALLBACK_OUT		0
+#define	USBTINY_CALLBACK_OUT    1
 
 // When this macro is defined as 1, an optimized CRC function is used
 // that calculates the CRC about twice as fast as the standard version,

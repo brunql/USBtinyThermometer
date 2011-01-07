@@ -16,7 +16,7 @@
             -Uhfuse:w:0xdc:m
             -Uefuse:w:0xff:m
  *
- *  Copyright (c) 2010, 2011 Mike Shatohin, mikeshatohin [at] gmail.com
+ *  Copyright (c) 2011 Mike Shatohin, mikeshatohin [at] gmail.com
  *
  *  USBtinyThermometer is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -37,47 +37,81 @@
 #include "usb.h"
 #include "main.h"
 #include "def.h"
+#include "version.h"
+#include "commands.h"
+
 #include "onewire.h"
 #include "ds18x20.h"
 
 
-byte_t	usb_setup ( byte_t data[8] )
+volatile uint8_t cmd = CMD_NOP;
+volatile uint16_t temperature = 0xFEEE; // near absolute zero
+volatile uint8_t result = 0x00;
+
+
+//
+//  Software USB interface
+//
+uint8_t usb_setup( uint8_t data[8] )
 {
-	return 8;	// simply echo back the setup packet
+	return 0xff; // call usb_in()
 }
 
-byte_t	usb_in ( byte_t* data, byte_t len )
+uint8_t usb_in( uint8_t* data, uint8_t len )
 {
-	return 0;
+    data[0] = (temperature & 0xff00) >> 8;
+    data[1] = (temperature & 0x00ff);
+
+    data[2] = VERSION_OF_HARDWARE_MAJOR;
+    data[3] = VERSION_OF_HARDWARE_MINOR;
+
+    data[4] = VERSION_OF_FIRMWARE_MAJOR;
+    data[5] = VERSION_OF_FIRMWARE_MINOR;
+
+    data[6] = result; // result of the last operation
+
+    return len;
 }
 
-void	usb_out ( byte_t* data, byte_t len )
+void usb_out( uint8_t* data, uint8_t len )
 {
-    TOGGLE(LED);
-    for(uint8_t i=0; i<len; i++){
-        data[i] = 0xff - i;
-    }
-    TOGGLE(LED);
+    cmd = data[0];
 }
 
 
 
-int	main ( void )
+//
+//  Main
+//
+int	main(void)
 {
-    uint8_t diff = OW_SEARCH_FIRST;
+    usb_init();
 
-    uint8_t sensorID[OW_ROMCODE_SIZE];
-    uint8_t sp[DS18X20_SP_SIZE];
-
-    DS18X20_find_sensor(&diff, sensorID);
-    DS18X20_start_meas();
-    _delay_ms(DS18B20_TCONV_12BIT);
-    DS18X20_read_scratchpad(sensorID, sp, DS18X20_SP_SIZE);
-
-	usb_init();
-
-	for	( ;; )
+	for(;;)
 	{
 		usb_poll();
+
+		switch(cmd){
+		case CMD_FIND_SENSOR:
+		    SET(LED);
+		    result = DS18X20_FindSensor();
+		    CLR(LED);
+		    cmd = CMD_NOP;
+		    break;
+		case CMD_START_MEASUREMENT:
+		    SET(LED);
+		    result = DS18X20_StartMeasurement();
+		    CLR(LED);
+		    cmd = CMD_NOP;
+		    break;
+		case CMD_READ_TEMPERATURE:
+		    SET(LED);
+		    temperature = DS18X20_ReadTemperature();
+		    CLR(LED);
+		    cmd = CMD_NOP;
+		    break;
+		default:
+		    break;
+		}
 	}
 }

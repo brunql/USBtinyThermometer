@@ -1,3 +1,10 @@
+// ------------------------------------------------------------------------------ //
+// Date: 7.01.11
+// Edited by Mike Shatohin (mikeshatohin@gmail.com)
+// Project: USBtinyThermometer
+// Changes: made it just for one temperature sensor
+// ------------------------------------------------------------------------------ //
+
 #ifndef DS18X20_H_
 #define DS18X20_H_
 
@@ -8,26 +15,11 @@ extern "C" {
 #include <stdlib.h>
 #include <stdint.h>
 
-// DS18x20 EERPROM support disabled(0) or enabled(1) :
-#define DS18X20_EEPROMSUPPORT     0
-// decicelsius functions disabled(0) or enabled(1):
-#define DS18X20_DECICELSIUS       0
-// max. resolution functions disabled(0) or enabled(1):
-#define DS18X20_MAX_RESOLUTION    0
-// extended output via UART disabled(0) or enabled(1) :
-#define DS18X20_VERBOSE           0
-
-
 /* return values */
 #define DS18X20_OK                0x00
 #define DS18X20_ERROR             0x01
 #define DS18X20_START_FAIL        0x02
 #define DS18X20_ERROR_CRC         0x03
-
-#define DS18X20_INVALID_DECICELSIUS  2000
-
-#define DS18X20_POWER_PARASITE    0x00
-#define DS18X20_POWER_EXTERN      0x01
 
 #define DS18X20_CONVERSION_DONE   0x00
 #define DS18X20_CONVERTING        0x01
@@ -81,59 +73,12 @@ extern "C" {
 #define DS18X20_DECIMAL_CHAR      '.'
 
 
-extern uint8_t DS18X20_find_sensor(uint8_t *diff, 
-	uint8_t id[]);
-//extern uint8_t DS18X20_get_power_status(uint8_t id[]);
-extern uint8_t DS18X20_start_meas( //uint8_t with_external,
-	//uint8_t id[]
-	);
-// returns 1 if conversion is in progress, 0 if finished
-// not available when parasite powered
-extern uint8_t DS18X20_conversion_in_progress(void);
 
-extern uint8_t DS18X20_read_scratchpad( uint8_t id[], uint8_t sp[], uint8_t n );
+extern uint8_t DS18X20_FindSensor(void);
+extern uint8_t DS18X20_StartMeasurement(void);
+extern uint8_t DS18X20_IsInProgress(void);
+extern uint16_t DS18X20_ReadTemperature(void);
 
-
-#if DS18X20_DECICELSIUS
-extern uint8_t DS18X20_read_decicelsius( uint8_t id[],
-	int16_t *decicelsius );
-extern uint8_t DS18X20_read_decicelsius_single( uint8_t familycode,
-	int16_t *decicelsius );
-extern uint8_t DS18X20_format_from_decicelsius( int16_t decicelsius, 
-	char s[], uint8_t n);
-#endif /* DS18X20_DECICELSIUS */
-
-
-#if DS18X20_MAX_RESOLUTION
-// temperature unit for max. resolution is �C * 10e-4
-// examples: -250625 -> -25.0625�C, 1250000 -> 125.0000 �C
-extern uint8_t DS18X20_read_maxres( uint8_t id[],
-	int32_t *temperaturevalue );
-extern uint8_t DS18X20_read_maxres_single( uint8_t familycode,
-	int32_t *temperaturevalue );
-extern uint8_t DS18X20_format_from_maxres( int32_t temperaturevalue, 
-	char s[], uint8_t n);
-#endif /* DS18X20_MAX_RESOLUTION */
-
-
-#if DS18X20_EEPROMSUPPORT
-// write th, tl and config-register to scratchpad (config ignored on DS18S20)
-uint8_t DS18X20_write_scratchpad( uint8_t id[], 
-	uint8_t th, uint8_t tl, uint8_t conf);
-// read scratchpad into array SP
-uint8_t DS18X20_read_scratchpad( uint8_t id[], uint8_t sp[], uint8_t n);
-// copy values int scratchpad into DS18x20 eeprom
-uint8_t DS18X20_scratchpad_to_eeprom( uint8_t with_power_extern,
-	uint8_t id[] );
-// copy values from DS18x20 eeprom into scratchpad
-uint8_t DS18X20_eeprom_to_scratchpad( uint8_t id[] );
-#endif /* DS18X20_EEPROMSUPPORT */
-
-
-#if DS18X20_VERBOSE
-extern void DS18X20_show_id_uart( uint8_t *id, size_t n );
-extern uint8_t DS18X20_read_meas_all_verbose( void );
-#endif /* DS18X20_VERBOSE */
 
 
 #ifdef __cplusplus

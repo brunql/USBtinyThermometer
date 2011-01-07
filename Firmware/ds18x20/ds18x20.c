@@ -7,18 +7,14 @@ Hardware: any AVR - tested with ATmega16/ATmega32/ATmega324P and 3 DS18B20
 
 Partly based on code from Peter Dannegger and others.
 
-changelog:
-20041124 - Extended measurements for DS18(S)20 contributed by Carsten Foss (CFO)
-200502xx - function DS18X20_read_meas_single
-20050310 - DS18x20 EEPROM functions (can be disabled to save flash-memory)
-           (DS18X20_EEPROMSUPPORT in ds18x20.h)
-20100625 - removed inner returns, added static function for read scratchpad
-         . replaced full-celcius and fractbit method with decicelsius
-           and maxres (degreeCelsius*10e-4) functions, renamed eeprom-functions,
-           delay in recall_e2 replaced by timeout-handling
-10100714 - ow_command_skip_last_recovery used for parasite-powerd devices so the
-           strong pull-up can be enabled in time even with longer OW recovery times
 **********************************************************************************/
+
+// ------------------------------------------------------------------------------ //
+// Date: 7.01.11
+// Edited by Mike Shatohin (mikeshatohin@gmail.com)
+// Project: USBtinyThermometer
+// Changes: made it just for one temperature sensor
+// ------------------------------------------------------------------------------ //
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -30,96 +26,58 @@ changelog:
 #include "onewire.h"
 #include "crc8.h"
 
-#define uart_puts_P_verbose(s__)
+
+uint8_t sensorID[OW_ROMCODE_SIZE];
+uint8_t scratchPad[DS18X20_SP_SIZE];
 
 
 /* find DS18X20 Sensors on 1-Wire-Bus
-   input/ouput: diff is the result of the last rom-search
-                *diff = OW_SEARCH_FIRST for first call
    output: id is the rom-code of the sensor found */
-uint8_t DS18X20_find_sensor( uint8_t *diff, uint8_t id[] )
+uint8_t DS18X20_FindSensor(void)
 {
-	uint8_t go;
-	uint8_t ret;
-
-	ret = DS18X20_OK;
-	go = 1;
-	do {
-		*diff = ow_rom_search( *diff, &id[0] );
-		if ( *diff == OW_PRESENCE_ERR || *diff == OW_DATA_ERR ||
-		     *diff == OW_LAST_DEVICE ) { 
-			go  = 0;
-			ret = DS18X20_ERROR;
-		} else {
-			if ( id[0] == DS18B20_FAMILY_CODE || id[0] == DS18S20_FAMILY_CODE ||
-			     id[0] == DS1822_FAMILY_CODE ) { 
-				go = 0;
-			}
-		}
-	} while (go);
-
+	uint8_t ret = DS18X20_OK;
+	uint8_t ow_res = 0;
+	ow_res = ow_rom_search( OW_SEARCH_FIRST, sensorID );
+	if (ow_res == OW_PRESENCE_ERR || ow_res == OW_DATA_ERR) {
+	    ret = DS18X20_ERROR;
+	}
 	return ret;
 }
-
-///* get power status of DS18x20
-//   input:   id = rom_code
-//   returns: DS18X20_POWER_EXTERN or DS18X20_POWER_PARASITE */
-//uint8_t DS18X20_get_power_status( uint8_t id[] )
-//{
-//	uint8_t pstat;
-//
-//	ow_reset();
-//	ow_command( DS18X20_READ_POWER_SUPPLY, id );
-//	pstat = ow_bit_io( 1 );
-//	ow_reset();
-//	return ( pstat ) ? DS18X20_POWER_EXTERN : DS18X20_POWER_PARASITE;
-//}
 
 /* start measurement (CONVERT_T) for all sensors if input id==NULL 
    or for single sensor where id is the rom-code */
-uint8_t DS18X20_start_meas( /*uint8_t with_power_extern, uint8_t id[] */)
+uint8_t DS18X20_StartMeasurement(void)
 {
-	uint8_t ret;
+	uint8_t ret = DS18X20_START_FAIL;
 
 	ow_reset();
 	if( ow_input_pin_state() ) { // only send if bus is "idle" = high
-//		if ( with_power_extern != DS18X20_POWER_EXTERN ) {
-//			ow_command_with_parasite_enable( DS18X20_CONVERT_T, id );
-//			/* not longer needed: ow_parasite_enable(); */
-//		} else {
-			ow_command( DS18X20_CONVERT_T, NULL );
-//		}
+	    ow_command( DS18X20_CONVERT_T, NULL );
 		ret = DS18X20_OK;
-	} 
-	else { 
-		uart_puts_P_verbose( "DS18X20_start_meas: Short Circuit!\r" );
-		ret = DS18X20_START_FAIL;
 	}
 
 	return ret;
 }
 
-//// returns 1 if conversion is in progress, 0 if finished
-//// not available when parasite powered.
-//uint8_t DS18X20_conversion_in_progress(void)
-//{
-//	return ow_bit_io( 1 ) ? DS18X20_CONVERSION_DONE : DS18X20_CONVERTING;
-//}
-
-uint8_t DS18X20_read_scratchpad( uint8_t id[], uint8_t sp[], uint8_t n )
+// returns 1 if conversion is in progress, 0 if finished
+// not available when parasite powered.
+uint8_t DS18X20_IsInProgress(void)
 {
-	uint8_t i;
-	uint8_t ret;
+	return ow_bit_io( 1 ) ? DS18X20_CONVERSION_DONE : DS18X20_CONVERTING;
+}
 
-	ow_command( DS18X20_READ, id );
-	for ( i = 0; i < n; i++ ) {
-		sp[i] = ow_byte_rd();
+uint16_t DS18X20_ReadTemperature(void)
+{
+	uint16_t ret = 0x0000;
+
+	ow_command( DS18X20_READ, sensorID );
+	for( uint8_t i = 0; i < DS18X20_SP_SIZE; i++ ) {
+		scratchPad[i] = ow_byte_rd();
 	}
-	if ( crc8( &sp[0], DS18X20_SP_SIZE ) ) {
-		ret = DS18X20_ERROR_CRC;
-	} else {
-		ret = DS18X20_OK;
+	if( crc8( scratchPad, DS18X20_SP_SIZE ) ) {
+		ret = 0xffff;
 	}
+	ret = ((uint16_t)scratchPad[1] << 8) | scratchPad[0];
 
 	return ret;
 }
