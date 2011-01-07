@@ -41,16 +41,16 @@
 // else, like for instance vendor ID 0x6666, which is registered as
 // "Prototype product Vendor ID".
 #define	USBTINY_VENDOR_ID		0x6666
-#define	USBTINY_DEVICE_ID		0x0100
+#define	USBTINY_DEVICE_ID		0x0200
 
 // The version of the device as a 16-bit number: 256*major + minor.
-#define	USBTINY_DEVICE_VERSION		0x100
+#define	USBTINY_DEVICE_VERSION		0x200
 
 // The following optional macros may be used as an identification of
 // your device. Undefine them when you run out of flash space.
 #define	USBTINY_VENDOR_NAME		"brunql.github.com"
 #define	USBTINY_DEVICE_NAME		"USBtinyThermometer"
-#define	USBTINY_SERIAL			"0100"
+#define	USBTINY_SERIAL			"0200"
 
 // Define the device class, subclass and protocol. Device class 0xff
 // is "vendor specific".

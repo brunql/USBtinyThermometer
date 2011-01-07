@@ -9,10 +9,13 @@
  *        Clock: 12MHz
  *
  *  Command to fill flash and set fuses:
- *  $ avrdude  -pt44 -cusbasp -u -Uflash:w:USBtinyThermometer.hex:a
 
- TODO: fuse bits
-
+ $ avrdude  -pt44 -cusbasp -u
+            -Uflash:w:USBtinyThermometer.hex:a
+            -Ulfuse:w:0xfe:m
+            -Uhfuse:w:0xdc:m
+            -Uefuse:w:0xff:m
+ *
  *  Copyright (c) 2010, 2011 Mike Shatohin, mikeshatohin [at] gmail.com
  *
  *  USBtinyThermometer is free software: you can redistribute it and/or modify
@@ -56,6 +59,7 @@ void	usb_out ( byte_t* data, byte_t len )
     }
     TOGGLE(LED);
 }
+
 
 
 int	main ( void )
