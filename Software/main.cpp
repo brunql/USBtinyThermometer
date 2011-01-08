@@ -47,7 +47,7 @@ static void printUsage()
     fprintf(stderr, "Project on github: https://github.com/brunql/USBtinyThermometer\n");
     fprintf(stderr, "Copyleft (c) 2011\n");
     fprintf(stderr, "\n");
-    fprintf(stderr, "Usage: USBtinyThermometer [-v] [-h]\n");
+    fprintf(stderr, "Usage: USBtinyThermometer [-v] [-l] [-h]\n");
     fprintf(stderr, "  -h, --help       show this help\n");
     fprintf(stderr, "  -v, --verbose    vebose output\n");
     fprintf(stderr, "  -l, --loop       loop measurement\n");
