@@ -50,15 +50,16 @@ static void printUsage()
     fprintf(stderr, "Usage: USBtinyThermometer [-v] [-h]\n");
     fprintf(stderr, "  -h, --help       show this help\n");
     fprintf(stderr, "  -v, --verbose    vebose output\n");
+    fprintf(stderr, "  -l, --loop       loop measurement\n");
     fprintf(stderr, "\n");
     fflush(stderr);
 }
 
-// Output str to stdout if 'verbose' option
+// Output str to stdout if 'verbose' option set
 static void out(const char *str)
 {
     if(verbose){
-        fprintf(stdout, str);
+        printf(str);
         fflush(stdout);
     }
 }
@@ -70,16 +71,21 @@ int main(int argc, char **argv)
 
     usb_dev_handle *handle = NULL;
     int result = 0;
+    bool loop_measure = false;
 
-    if(argc > 2){
+    if(argc > 3){
         printUsage();
         exit(1);
-    }else if(argc == 2){
-        if((strcmp(argv[1], "-v") == 0) ||
-           (strcmp(argv[1], "--verbose") == 0)){
+    }
+
+    for(int i=1; i<argc; i++){
+        if((strcmp(argv[i], "-v") == 0) || (strcmp(argv[i], "--verbose") == 0)){
             verbose = 1;
+        }else if((strcmp(argv[i], "-l") == 0) || (strcmp(argv[i], "--loop") == 0)){
+            loop_measure = true;
         }else{
             printUsage();
+            printf("'%s'\n", argv[i]);
             exit(1);
         }
     }
@@ -93,72 +99,75 @@ int main(int argc, char **argv)
 
     out("Device open success\n");
 
-    out("Find temperature sensor...");
 
-    buffer[0] = CMD_FIND_SENSOR;
-    result = usb_control_msg(handle, USB_ENDPOINT_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE, 0, 0, 0, buffer, sizeof(buffer), 5000);
-    if(result == 8){
-        out("OK\n");
-    }else{
-        out("FAIL\n");
-        exit(3);
-    }
+    do{
 
-    usleep(100000);
+        out("Find temperature sensor...");
 
-    out("Start measurement...");
-    buffer[0] = CMD_START_MEASUREMENT;
-    result = usb_control_msg(handle, USB_ENDPOINT_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE, 0, 0, 0, buffer, sizeof(buffer), 5000);
-    if(result == 8){
-        out("OK\n");
-    }else{
-        out("FAIL\n");
-        exit(3);
-    }
-
-    out("Sleep 1 second while measuring...\n");
-    sleep(1);
-
-    out("Read temperature...");
-    buffer[0] = CMD_READ_TEMPERATURE;
-    result = usb_control_msg(handle, USB_ENDPOINT_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE, 0, 0, 0, buffer, sizeof(buffer), 5000);
-    if(result == 8){
-        out("OK\n");
-    }else{
-        out("FAIL\n");
-        exit(3);
-    }
-
-    usleep(100000);
-
-    out("Request temperature...");
-    result = usb_control_msg(handle, USB_ENDPOINT_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE, 0, 0, 0, buffer, sizeof(buffer), 5000);
-    if(result == 8){
-        out("OK\n");
-    }else{
-        out("FAIL\n");
-        exit(3);
-    }
-
-    if(verbose){
-        fprintf(stdout, "Buffer: ");
-        for(int i = 0; i<sizeof(buffer); i++){
-            fprintf(stdout, "0x%02x ", buffer[i] & 0xff);
+        buffer[0] = CMD_FIND_SENSOR;
+        result = usb_control_msg(handle, USB_ENDPOINT_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE, 0, 0, 0, buffer, sizeof(buffer), 5000);
+        if(result == 8){
+            out("OK\n");
+        }else{
+            out("FAIL\n");
+            exit(3);
         }
-        fprintf(stdout, "\n");
-        fflush(stdout);
-    }
 
-    uint8_t temp_lo = buffer[1] & 0xff;
-    uint8_t temp_hi = buffer[0] & 0xff;
+        usleep(20000); // delay 20ms; if delete this line, start measurement will fail
 
-    int16_t temp = (temp_hi << 8) | (temp_lo);
+        out("Start measurement...");
+        buffer[0] = CMD_START_MEASUREMENT;
+        result = usb_control_msg(handle, USB_ENDPOINT_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE, 0, 0, 0, buffer, sizeof(buffer), 5000);
+        if(result == 8){
+            out("OK\n");
+        }else{
+            out("FAIL\n");
+            exit(3);
+        }
 
-    float temp_f = temp / 16.0; // low 4 bits of temp are fractional part
+        out("Sleep 1 second while measuring...\n");
+        sleep(1);
 
-    out("Temperature = ");
-    fprintf(stdout, "%+.4f", temp_f);
-    out("\n");
+        out("Read temperature...");
+        buffer[0] = CMD_READ_TEMPERATURE;
+        result = usb_control_msg(handle, USB_ENDPOINT_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE, 0, 0, 0, buffer, sizeof(buffer), 5000);
+        if(result == 8){
+            out("OK\n");
+        }else{
+            out("FAIL\n");
+            exit(3);
+        }
+
+        usleep(20000); // delay 20ms; if delete this line, request temp will fail
+
+        out("Request temperature...");
+        result = usb_control_msg(handle, USB_ENDPOINT_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE, 0, 0, 0, buffer, sizeof(buffer), 5000);
+        if(result == 8){
+            out("OK\n");
+        }else{
+            out("FAIL\n");
+            exit(3);
+        }
+
+        if(verbose){
+            printf("Buffer: ");
+            for(int i = 0; i<sizeof(buffer); i++){
+                printf("0x%02x ", buffer[i] & 0xff);
+            }
+            printf("\n");
+        }
+
+        uint8_t temp_lo = buffer[1] & 0xff;
+        uint8_t temp_hi = buffer[0] & 0xff;
+
+        int16_t temp = (temp_hi << 8) | (temp_lo);
+
+        float temp_f = temp / 16.0; // low 4 bits of temp are fractional part
+
+        out("Temperature = ");
+        printf("%+.4f\n", temp_f);
+        out("\n");
+    }while(loop_measure);
 
     usb_close(handle);
 
