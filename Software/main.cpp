@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 #include <usb.h>
 #include "opendevice.h"
 
@@ -82,7 +83,6 @@ int main(int argc, char **argv)
             exit(1);
         }
     }
-
 
     usb_init();
 
@@ -149,13 +149,15 @@ int main(int argc, char **argv)
         fflush(stdout);
     }
 
-    int temp_int = ((buffer[0] & 0xf0) << 8) | ((buffer[0] & 0xff) << 4) | ((buffer[1] & 0xf0) >> 4);
+    uint8_t temp_lo = buffer[1] & 0xff;
+    uint8_t temp_hi = buffer[0] & 0xff;
 
-    float temp_f = temp_int + (buffer[1] & 0x0f) / 16.0;
+    int16_t temp = (temp_hi << 8) | (temp_lo);
 
+    float temp_f = temp / 16.0; // low 4 bits of temp are fractional part
 
     out("Temperature = ");
-    fprintf(stdout, "%f", temp_f);
+    fprintf(stdout, "%+.4f", temp_f);
     out("\n");
 
     usb_close(handle);
