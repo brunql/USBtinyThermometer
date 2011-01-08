@@ -8,4 +8,5 @@ Software USB interface from project [USBtiny](http://www.xs4all.nl/~dicks/avr/us
 **Firmware**: `C`, `USBtiny`   
 **Software**: `C++`
 
-Photos of the device [here](http://www.flickr.com/photos/brunql/sets/72157625642537985/).
+Photos [here](http://www.flickr.com/photos/brunql/sets/72157625642537985/).
+Video [here](http://www.youtube.com/watch?v=7PbmH23QKaU).
