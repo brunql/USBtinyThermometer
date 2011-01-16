@@ -45,7 +45,7 @@
 
 
 volatile uint8_t cmd = CMD_NOP;
-volatile uint16_t temperature = 0xFEEE; // near absolute zero
+volatile uint16_t temperature = 0xFEEE; // near absolute zero;
 volatile uint8_t result = 0x00;
 
 
@@ -85,6 +85,8 @@ void usb_out( uint8_t* data, uint8_t len )
 //
 int	main(void)
 {
+    uint16_t *temp = 0x0000;
+
     usb_init();
 
 	for(;;)
@@ -92,9 +94,9 @@ int	main(void)
 		usb_poll();
 
 		switch(cmd){
-		case CMD_FIND_SENSOR:
+		case CMD_FIND_SENSORS:
 		    SET(LED);
-		    result = DS18X20_FindSensor();
+		    result = DS18X20_FindSensors();
 		    CLR(LED);
 		    cmd = CMD_NOP;
 		    break;
@@ -104,12 +106,22 @@ int	main(void)
 		    CLR(LED);
 		    cmd = CMD_NOP;
 		    break;
-		case CMD_READ_TEMPERATURE:
+		case CMD_READ_TEMPERATURE_FIRST:
 		    SET(LED);
-		    temperature = DS18X20_ReadTemperature();
+		    *temp = 0x0000;
+		    result = DS18X20_ReadTemperature(temp, FIRST_SENSOR);
+		    temperature = *temp;
 		    CLR(LED);
 		    cmd = CMD_NOP;
 		    break;
+        case CMD_READ_TEMPERATURE_SECOND:
+            SET(LED);
+            *temp = 0x0000;
+            result = DS18X20_ReadTemperature(temp, SECOND_SENSOR);
+            temperature = *temp;
+            CLR(LED);
+            cmd = CMD_NOP;
+            break;
 		default:
 		    break;
 		}

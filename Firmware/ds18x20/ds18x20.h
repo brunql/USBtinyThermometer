@@ -2,7 +2,7 @@
 // Date: 7.01.11
 // Edited by Mike Shatohin (mikeshatohin@gmail.com)
 // Project: USBtinyThermometer
-// Changes: made it just for one temperature sensor
+// Changes: made it just for two temperature sensor
 // ------------------------------------------------------------------------------ //
 
 #ifndef DS18X20_H_
@@ -16,10 +16,12 @@ extern "C" {
 #include <stdint.h>
 
 /* return values */
-#define DS18X20_OK                0x00
-#define DS18X20_ERROR             0x01
-#define DS18X20_START_FAIL        0x02
-#define DS18X20_ERROR_CRC         0x03
+#define DS18X20_OK                  0x00
+#define DS18X20_ERROR               0x01
+#define DS18X20_ERROR_SEARCH_FIRST  0x02
+#define DS18X20_ERROR_SEARCH_SECOND 0x03
+#define DS18X20_START_FAIL          0x04
+#define DS18X20_ERROR_CRC           0x05
 
 #define DS18X20_CONVERSION_DONE   0x00
 #define DS18X20_CONVERTING        0x01
@@ -73,11 +75,10 @@ extern "C" {
 #define DS18X20_DECIMAL_CHAR      '.'
 
 
-
-extern uint8_t DS18X20_FindSensor(void);
+extern uint8_t DS18X20_FindSensors(void);
 extern uint8_t DS18X20_StartMeasurement(void);
 extern uint8_t DS18X20_IsInProgress(void);
-extern uint16_t DS18X20_ReadTemperature(void);
+extern uint8_t DS18X20_ReadTemperature(uint16_t *temperature, uint8_t sensorIndex);
 
 
 

@@ -13,7 +13,7 @@ Partly based on code from Peter Dannegger and others.
 // Date: 7.01.11
 // Edited by Mike Shatohin (mikeshatohin@gmail.com)
 // Project: USBtinyThermometer
-// Changes: made it just for one temperature sensor
+// Changes: made it just for two temperature sensor
 // ------------------------------------------------------------------------------ //
 
 #include <stdlib.h>
@@ -26,26 +26,39 @@ Partly based on code from Peter Dannegger and others.
 #include "onewire.h"
 #include "crc8.h"
 
+#include "commands.h"
 
-uint8_t sensorID[OW_ROMCODE_SIZE];
+uint8_t sensorIdFirst[OW_ROMCODE_SIZE];
+uint8_t sensorIdSecond[OW_ROMCODE_SIZE];
 uint8_t scratchPad[DS18X20_SP_SIZE];
 
 
-/* find DS18X20 Sensors on 1-Wire-Bus
-   output: id is the rom-code of the sensor found */
-uint8_t DS18X20_FindSensor(void)
+/*
+ * Find two DS18X20 Sensors on 1-Wire-Bus
+ */
+uint8_t DS18X20_FindSensors(void)
 {
 	uint8_t ret = DS18X20_OK;
 	uint8_t ow_res = 0;
-	ow_res = ow_rom_search( OW_SEARCH_FIRST, sensorID );
+
+	// Search first sensor
+	ow_res = ow_rom_search( OW_SEARCH_FIRST, sensorIdFirst );
 	if (ow_res == OW_PRESENCE_ERR || ow_res == OW_DATA_ERR) {
-	    ret = DS18X20_ERROR;
+	    ret = DS18X20_ERROR_SEARCH_FIRST;
+	}else{
+	    // Search second sensor
+	    ow_res = ow_rom_search(ow_res, sensorIdSecond );
+	    if (ow_res == OW_PRESENCE_ERR || ow_res == OW_DATA_ERR) {
+	        ret = DS18X20_ERROR_SEARCH_SECOND;
+	    }
+	    // Hey, man, don't do it for three sensors!!!
 	}
 	return ret;
 }
 
-/* start measurement (CONVERT_T) for all sensors if input id==NULL 
-   or for single sensor where id is the rom-code */
+/*
+ * Start measurement for all sensors
+ */
 uint8_t DS18X20_StartMeasurement(void)
 {
 	uint8_t ret = DS18X20_START_FAIL;
@@ -59,25 +72,34 @@ uint8_t DS18X20_StartMeasurement(void)
 	return ret;
 }
 
-// returns 1 if conversion is in progress, 0 if finished
-// not available when parasite powered.
+/*
+ * Returns 1 if conversion is in progress, 0 if finished;
+ * not available when parasite powered.
+ */
 uint8_t DS18X20_IsInProgress(void)
 {
 	return ow_bit_io( 1 ) ? DS18X20_CONVERSION_DONE : DS18X20_CONVERTING;
 }
 
-uint16_t DS18X20_ReadTemperature(void)
+/*
+ * Returns temperature of sensor specified by sensorIndex (mb: FIRST_SENSOR or SECOND_SENSOR)
+ */
+uint8_t DS18X20_ReadTemperature(uint16_t *temperature, uint8_t sensorIndex)
 {
-	uint16_t ret = 0x0000;
+	uint8_t ret = DS18X20_OK;
 
-	ow_command( DS18X20_READ, sensorID );
+	if(sensorIndex == FIRST_SENSOR){
+	    ow_command( DS18X20_READ, sensorIdFirst );
+	}else if(sensorIndex == SECOND_SENSOR){
+	    ow_command( DS18X20_READ, sensorIdSecond );
+	}
 	for( uint8_t i = 0; i < DS18X20_SP_SIZE; i++ ) {
 		scratchPad[i] = ow_byte_rd();
 	}
 	if( crc8( scratchPad, DS18X20_SP_SIZE ) ) {
-		ret = 0xffff;
+		ret = DS18X20_ERROR_CRC;
 	}
-	ret = ((uint16_t)scratchPad[1] << 8) | scratchPad[0];
+	*temperature = ((uint16_t)((uint16_t)scratchPad[1] << 8) | scratchPad[0]);
 
 	return ret;
 }
