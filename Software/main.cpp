@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <math.h>
 #include <usb.h>
 #include "opendevice.h"
 
@@ -47,10 +48,14 @@ static void printUsage()
     fprintf(stderr, "Project on github: https://github.com/brunql/USBtinyThermometer\n");
     fprintf(stderr, "Copyleft (c) 2011\n");
     fprintf(stderr, "\n");
-    fprintf(stderr, "Usage: USBtinyThermometer [-v] [-l] [-h]\n");
+    fprintf(stderr, "Usage: USBtinyThermometer [-v] [-l] [-h] [-2] \n");
+    fprintf(stderr, "Example: USBtinyThermometer -2 -v \n");
     fprintf(stderr, "  -h, --help       show this help\n");
     fprintf(stderr, "  -v, --verbose    vebose output\n");
     fprintf(stderr, "  -l, --loop       loop measurement\n");
+    fprintf(stderr, "  -r, --round      rounded to one decimal\n");
+    fprintf(stderr, "  -1, --first      measure first sensor (default)\n");
+    fprintf(stderr, "  -2, --second     measure second sensor\n");
     fprintf(stderr, "\n");
     fflush(stderr);
 }
@@ -59,8 +64,23 @@ static void printUsage()
 static void out(const char *str)
 {
     if(verbose){
-        printf(str);
+        printf("%s", str);
         fflush(stdout);
+    }
+}
+
+void outFail(const int usb_control_msg_res, const char buff[8], const char * usb_error_str)
+{
+    if(verbose){
+        fprintf(stderr, "  usb_control_msg_res = %d; \n", usb_control_msg_res);
+        fprintf(stderr, "  usb_error_str = %s; \n", usb_error_str);
+        fprintf(stderr, "  buffer = ");
+        for(int i=0; i<8; i++){
+            fprintf(stderr, "0x%02X ", buff[i] & 0xff);
+        }
+        fprintf(stderr, "\n");
+        fprintf(stderr, "  result_last_operation = %02X; \n", (buff[6] & 0xff));
+        fflush(stderr);
     }
 }
 
@@ -72,6 +92,8 @@ int main(int argc, char **argv)
     usb_dev_handle *handle = NULL;
     int result = 0;
     bool loop_measure = false;
+    bool round_to_one_decimal = false;
+    int measure_sensor_index = FIRST_SENSOR;
 
     if(argc > 3){
         printUsage();
@@ -83,6 +105,12 @@ int main(int argc, char **argv)
             verbose = 1;
         }else if((strcmp(argv[i], "-l") == 0) || (strcmp(argv[i], "--loop") == 0)){
             loop_measure = true;
+        }else if((strcmp(argv[i], "-r") == 0) || (strcmp(argv[i], "--round") == 0)){
+            round_to_one_decimal = true;
+        }else if((strcmp(argv[i], "-1") == 0) || (strcmp(argv[i], "--first") == 0)){
+            measure_sensor_index = FIRST_SENSOR;
+        }else if((strcmp(argv[i], "-2") == 0) || (strcmp(argv[i], "--second") == 0)){
+            measure_sensor_index = SECOND_SENSOR;
         }else{
             printUsage();
             printf("'%s'\n", argv[i]);
@@ -102,39 +130,59 @@ int main(int argc, char **argv)
 
     do{
 
-        out("Find temperature sensor...");
+        out("Find temperature sensors...");
 
-        buffer[0] = CMD_FIND_SENSOR;
+        buffer[0] = CMD_FIND_SENSORS;
         result = usb_control_msg(handle, USB_ENDPOINT_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE, 0, 0, 0, buffer, sizeof(buffer), 5000);
         if(result == 8){
             out("OK\n");
+            usleep(200000); // delay 20ms; if delete this line, start measurement will fail
+            result = usb_control_msg(handle, USB_ENDPOINT_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE, 0, 0, 0, buffer, sizeof(buffer), 5000);
+            outFail(result, buffer, usb_strerror());
         }else{
             out("FAIL\n");
+            outFail(result, buffer, usb_strerror());
             exit(3);
         }
 
-        usleep(20000); // delay 20ms; if delete this line, start measurement will fail
+        usleep(200000); // delay 20ms; if delete this line, start measurement will fail
 
-        out("Start measurement...");
+        out("Start measurement...");        
         buffer[0] = CMD_START_MEASUREMENT;
         result = usb_control_msg(handle, USB_ENDPOINT_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE, 0, 0, 0, buffer, sizeof(buffer), 5000);
         if(result == 8){
             out("OK\n");
+            usleep(200000); // delay 20ms; if delete this line, start measurement will fail
+            result = usb_control_msg(handle, USB_ENDPOINT_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE, 0, 0, 0, buffer, sizeof(buffer), 5000);
+            outFail(result, buffer, usb_strerror());
         }else{
             out("FAIL\n");
+            outFail(result, buffer, usb_strerror());
             exit(3);
         }
 
         out("Sleep 1 second while measuring...\n");
-        sleep(1);
+        sleep(2);
 
-        out("Read temperature...");
-        buffer[0] = CMD_READ_TEMPERATURE;
+        if(measure_sensor_index == FIRST_SENSOR){
+            out("Read temperature from FIRST sensor...");
+            buffer[0] = CMD_READ_TEMPERATURE_FIRST;
+        }else if(measure_sensor_index == SECOND_SENSOR){
+            out("Read temperature from SECOND sensor...");
+            buffer[0] = CMD_READ_TEMPERATURE_SECOND;
+        }else{
+            fprintf(stderr, "Read temperature from sensor=%d; FAIL", measure_sensor_index);
+            exit(4);
+        }
         result = usb_control_msg(handle, USB_ENDPOINT_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE, 0, 0, 0, buffer, sizeof(buffer), 5000);
         if(result == 8){
             out("OK\n");
+            usleep(200000); // delay 20ms; if delete this line, start measurement will fail
+            result = usb_control_msg(handle, USB_ENDPOINT_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE, 0, 0, 0, buffer, sizeof(buffer), 5000);
+            outFail(result, buffer, usb_strerror());
         }else{
             out("FAIL\n");
+            outFail(result, buffer, usb_strerror());
             exit(3);
         }
 
@@ -144,14 +192,16 @@ int main(int argc, char **argv)
         result = usb_control_msg(handle, USB_ENDPOINT_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE, 0, 0, 0, buffer, sizeof(buffer), 5000);
         if(result == 8){
             out("OK\n");
+            outFail(result, buffer, usb_strerror());
         }else{
             out("FAIL\n");
+            outFail(result, buffer, usb_strerror());
             exit(3);
         }
 
         if(verbose){
             printf("Buffer: ");
-            for(int i = 0; i<sizeof(buffer); i++){
+            for(unsigned i = 0; i<sizeof(buffer); i++){
                 printf("0x%02x ", buffer[i] & 0xff);
             }
             printf("\n");
@@ -165,7 +215,17 @@ int main(int argc, char **argv)
         float temp_f = temp / 16.0; // low 4 bits of temp are fractional part
 
         out("Temperature = ");
-        printf("%+.4f\n", temp_f);
+
+        round_to_one_decimal = true;
+        if(round_to_one_decimal){
+            temp_f *= 10;
+            temp_f = round(temp_f);
+            temp_f /= 10;
+            printf("%+.1f\n", temp_f);
+        }else{
+            printf("%+.4f\n", temp_f);
+        }
+
         out("\n");
     }while(loop_measure);
 
