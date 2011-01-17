@@ -72,15 +72,15 @@ static void out(const char *str)
 void outFail(const int usb_control_msg_res, const char buff[8], const char * usb_error_str)
 {
     if(verbose){
-        fprintf(stderr, "  usb_control_msg_res = %d; \n", usb_control_msg_res);
-        fprintf(stderr, "  usb_error_str = %s; \n", usb_error_str);
-        fprintf(stderr, "  buffer = ");
+        printf("  usb_control_msg_res = %d; \n", usb_control_msg_res);
+        printf("  usb_error_str = %s; \n", usb_error_str);
+        printf("  buffer = ");
         for(int i=0; i<8; i++){
-            fprintf(stderr, "0x%02X ", buff[i] & 0xff);
+            printf("0x%02X ", buff[i] & 0xff);
         }
-        fprintf(stderr, "\n");
-        fprintf(stderr, "  result_last_operation = %02X; \n", (buff[6] & 0xff));
-        fflush(stderr);
+        printf("\n");
+        printf("  result_last_operation = 0x%02X; \n", (buff[6] & 0xff));
+        fflush(stdout);
     }
 }
 
@@ -132,11 +132,13 @@ int main(int argc, char **argv)
 
         out("Find temperature sensors...");
 
+        usleep(200*1000);
+
         buffer[0] = CMD_FIND_SENSORS;
         result = usb_control_msg(handle, USB_ENDPOINT_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE, 0, 0, 0, buffer, sizeof(buffer), 5000);
         if(result == 8){
             out("OK\n");
-            usleep(200000); // delay 20ms; if delete this line, start measurement will fail
+            usleep(200*1000);
             result = usb_control_msg(handle, USB_ENDPOINT_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE, 0, 0, 0, buffer, sizeof(buffer), 5000);
             outFail(result, buffer, usb_strerror());
         }else{
@@ -145,14 +147,14 @@ int main(int argc, char **argv)
             exit(3);
         }
 
-        usleep(200000); // delay 20ms; if delete this line, start measurement will fail
+        usleep(200*1000);
 
         out("Start measurement...");        
         buffer[0] = CMD_START_MEASUREMENT;
         result = usb_control_msg(handle, USB_ENDPOINT_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE, 0, 0, 0, buffer, sizeof(buffer), 5000);
         if(result == 8){
             out("OK\n");
-            usleep(200000); // delay 20ms; if delete this line, start measurement will fail
+            usleep(200*1000);
             result = usb_control_msg(handle, USB_ENDPOINT_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE, 0, 0, 0, buffer, sizeof(buffer), 5000);
             outFail(result, buffer, usb_strerror());
         }else{
@@ -177,7 +179,7 @@ int main(int argc, char **argv)
         result = usb_control_msg(handle, USB_ENDPOINT_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE, 0, 0, 0, buffer, sizeof(buffer), 5000);
         if(result == 8){
             out("OK\n");
-            usleep(200000); // delay 20ms; if delete this line, start measurement will fail
+            usleep(200*1000);
             result = usb_control_msg(handle, USB_ENDPOINT_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE, 0, 0, 0, buffer, sizeof(buffer), 5000);
             outFail(result, buffer, usb_strerror());
         }else{
@@ -186,7 +188,7 @@ int main(int argc, char **argv)
             exit(3);
         }
 
-        usleep(20000); // delay 20ms; if delete this line, request temp will fail
+        usleep(200*1000);
 
         out("Request temperature...");
         result = usb_control_msg(handle, USB_ENDPOINT_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE, 0, 0, 0, buffer, sizeof(buffer), 5000);
