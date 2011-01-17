@@ -41,13 +41,17 @@ uint8_t DS18X20_FindSensors(void)
 	uint8_t ret = DS18X20_OK;
 	uint8_t ow_res = 0;
 
+    ow_reset();
+
 	// Search first sensor
-	ow_res = ow_rom_search( OW_SEARCH_FIRST, sensorIdFirst );
+	ow_res = ow_rom_search( OW_SEARCH_FIRST, &sensorIdFirst[0] );
 	if (ow_res == OW_PRESENCE_ERR || ow_res == OW_DATA_ERR) {
 	    ret = DS18X20_ERROR_SEARCH_FIRST;
+	}else if(ow_res == OW_LAST_DEVICE){
+	    ret = RESULT_ONLY_ONE_SENSOR;
 	}else{
 	    // Search second sensor
-	    ow_res = ow_rom_search(ow_res, sensorIdSecond );
+	    ow_res = ow_rom_search(ow_res, &sensorIdSecond[0] );
 	    if (ow_res == OW_PRESENCE_ERR || ow_res == OW_DATA_ERR) {
 	        ret = DS18X20_ERROR_SEARCH_SECOND;
 	    }
@@ -65,7 +69,7 @@ uint8_t DS18X20_StartMeasurement(void)
 
 	ow_reset();
 	if( ow_input_pin_state() ) { // only send if bus is "idle" = high
-	    ow_command( DS18X20_CONVERT_T, NULL );
+	    ow_command( DS18X20_CONVERT_T, 0 );
 		ret = DS18X20_OK;
 	}
 
@@ -89,14 +93,14 @@ uint8_t DS18X20_ReadTemperature(uint16_t *temperature, uint8_t sensorIndex)
 	uint8_t ret = DS18X20_OK;
 
 	if(sensorIndex == FIRST_SENSOR){
-	    ow_command( DS18X20_READ, sensorIdFirst );
+	    ow_command( DS18X20_READ, &sensorIdFirst[0] );
 	}else if(sensorIndex == SECOND_SENSOR){
-	    ow_command( DS18X20_READ, sensorIdSecond );
+	    ow_command( DS18X20_READ, &sensorIdSecond[0] );
 	}
 	for( uint8_t i = 0; i < DS18X20_SP_SIZE; i++ ) {
 		scratchPad[i] = ow_byte_rd();
 	}
-	if( crc8( scratchPad, DS18X20_SP_SIZE ) ) {
+	if( crc8( &scratchPad[0], DS18X20_SP_SIZE ) ) {
 		ret = DS18X20_ERROR_CRC;
 	}
 	*temperature = ((uint16_t)((uint16_t)scratchPad[1] << 8) | scratchPad[0]);

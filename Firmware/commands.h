@@ -39,4 +39,8 @@ enum SENSORS{
     SECOND_SENSOR = 1,
 };
 
+enum RESULTS{
+    RESULT_ONLY_ONE_SENSOR=0x12,
+};
+
 #endif /* COMMANDS_H_ */

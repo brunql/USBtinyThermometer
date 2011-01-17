@@ -70,7 +70,9 @@ uint8_t usb_in( uint8_t* data, uint8_t len )
 
     data[6] = result; // result of the last operation
 
-    return len;
+    data[7] = 0x00;
+
+    return 8;
 }
 
 void usb_out( uint8_t* data, uint8_t len )
