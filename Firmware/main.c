@@ -40,13 +40,24 @@
 #include "version.h"
 #include "commands.h"
 
+#include <util/atomic.h>
+
 #include "onewire.h"
 #include "ds18x20.h"
 
 
 volatile uint8_t cmd = CMD_NOP;
-volatile uint16_t temperature = 0xFEEE; // near absolute zero;
+volatile uint8_t cmd_new = CMD_NOP;
+
+
+volatile uint16_t temperature = 0xABCD;
 volatile uint8_t result = 0x00;
+
+#define NUMBER_OF_SENSORS   5
+
+uint8_t sensorIDs[NUMBER_OF_SENSORS][OW_ROMCODE_SIZE];
+volatile uint8_t nSensors = 0xff; // number of sensors on 1-wire
+
 
 
 //
@@ -59,20 +70,26 @@ uint8_t usb_setup( uint8_t data[8] )
 
 uint8_t usb_in( uint8_t* data, uint8_t len )
 {
-    data[0] = (temperature & 0xff00) >> 8;
-    data[1] = (temperature & 0x00ff);
+    if(len == 8){
+        data[0] = (temperature & 0xff00) >> 8;
+        data[1] = (temperature & 0x00ff);
 
-    data[2] = VERSION_OF_HARDWARE_MAJOR;
-    data[3] = VERSION_OF_HARDWARE_MINOR;
+        data[2] = VERSION_OF_HARDWARE_MAJOR;
+        data[3] = VERSION_OF_HARDWARE_MINOR;
 
-    data[4] = VERSION_OF_FIRMWARE_MAJOR;
-    data[5] = VERSION_OF_FIRMWARE_MINOR;
+        data[4] = VERSION_OF_FIRMWARE_MAJOR;
+        data[5] = VERSION_OF_FIRMWARE_MINOR;
 
-    data[6] = result; // result of the last operation
+        data[6] = result; // result of the last operation
 
-    data[7] = 0x00;
-
-    return 8;
+        data[7] = nSensors;
+    }else{
+        for(uint8_t i=1; i <= len; i++){
+            data[i] = i;
+        }
+        CLR(LED);
+    }
+    return len;
 }
 
 void usb_out( uint8_t* data, uint8_t len )
@@ -81,51 +98,73 @@ void usb_out( uint8_t* data, uint8_t len )
 }
 
 
+uint8_t SearchSensors(void)
+{
+    uint8_t result = 0;
+
+    uint8_t id[OW_ROMCODE_SIZE];
+    uint8_t ow_res = OW_SEARCH_FIRST;
+
+    ow_reset();
+
+    nSensors = 0;
+
+    ow_res = OW_SEARCH_FIRST;
+    while ( ow_res != OW_LAST_DEVICE && nSensors < NUMBER_OF_SENSORS ) {
+        DS18X20_FindSensor( &ow_res, &id[0] );
+
+        if( ow_res == OW_PRESENCE_ERR ) {
+            result = OW_PRESENCE_ERR;
+            break;
+        }
+
+        if( ow_res == OW_DATA_ERR ) {
+            result = OW_DATA_ERR;
+            break;
+        }
+
+        for (uint8_t i=0; i < OW_ROMCODE_SIZE; i++ )
+            sensorIDs[nSensors][i] = id[i];
+
+        nSensors++;
+    }
+
+    return result;
+}
+
 
 //
 //  Main
 //
 int	main(void)
 {
-    uint16_t *temp = 0x0000;
-
     usb_init();
 
 	for(;;)
 	{
-		usb_poll();
+        usb_poll();
 
-		switch(cmd){
-		case CMD_FIND_SENSORS:
-		    SET(LED);
-		    result = DS18X20_FindSensors();
-		    CLR(LED);
-		    cmd = CMD_NOP;
-		    break;
-		case CMD_START_MEASUREMENT:
-		    SET(LED);
-		    result = DS18X20_StartMeasurement();
-		    CLR(LED);
-		    cmd = CMD_NOP;
-		    break;
-		case CMD_READ_TEMPERATURE_FIRST:
-		    SET(LED);
-		    *temp = 0x0000;
-		    result = DS18X20_ReadTemperature(temp, FIRST_SENSOR);
-		    temperature = *temp;
-		    CLR(LED);
-		    cmd = CMD_NOP;
-		    break;
-        case CMD_READ_TEMPERATURE_SECOND:
-            SET(LED);
-            *temp = 0x0000;
-            result = DS18X20_ReadTemperature(temp, SECOND_SENSOR);
-            temperature = *temp;
-            CLR(LED);
+        if(cmd == CMD_NOP){
+            usb_poll();
+
+        }else if(cmd == CMD_FIND_SENSORS){
+            result = SearchSensors();
             cmd = CMD_NOP;
-            break;
-		default:
-		    break;
-		}
+
+        }else if(cmd == CMD_START_MEASUREMENT){
+            result = DS18X20_StartMeasurement();
+            cmd = CMD_NOP;
+
+        }else if(cmd == CMD_READ_TEMPERATURE_FIRST){
+            temperature = DS18X20_ReadTemperature(&sensorIDs[FIRST_SENSOR][0]);
+            cmd = CMD_NOP;
+
+        }else if(cmd == CMD_READ_TEMPERATURE_SECOND){
+            temperature = DS18X20_ReadTemperature(&sensorIDs[SECOND_SENSOR][0]);
+            cmd = CMD_NOP;
+
+        }else{
+            usb_poll();
+        }
 	}
 }

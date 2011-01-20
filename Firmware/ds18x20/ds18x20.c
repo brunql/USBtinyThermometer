@@ -28,36 +28,33 @@ Partly based on code from Peter Dannegger and others.
 
 #include "commands.h"
 
-uint8_t sensorIdFirst[OW_ROMCODE_SIZE];
-uint8_t sensorIdSecond[OW_ROMCODE_SIZE];
+
 uint8_t scratchPad[DS18X20_SP_SIZE];
 
 
 /*
  * Find two DS18X20 Sensors on 1-Wire-Bus
  */
-uint8_t DS18X20_FindSensors(void)
+uint8_t DS18X20_FindSensor(uint8_t *ow_res, uint8_t id[])
 {
 	uint8_t ret = DS18X20_OK;
-	uint8_t ow_res = 0;
+    uint8_t go = 1;
 
-    ow_reset();
+    do {
+        *ow_res = ow_rom_search( *ow_res, &id[0] );
+        if ( *ow_res == OW_PRESENCE_ERR || *ow_res == OW_DATA_ERR ||
+             *ow_res == OW_LAST_DEVICE ) {
+            go  = 0;
+            ret = DS18X20_ERROR;
+        } else {
+            if ( id[0] == DS18B20_FAMILY_CODE || id[0] == DS18S20_FAMILY_CODE ||
+                 id[0] == DS1822_FAMILY_CODE ) {
+                go = 0;
+            }
+        }
+    } while (go);
 
-	// Search first sensor
-	ow_res = ow_rom_search( OW_SEARCH_FIRST, &sensorIdFirst[0] );
-	if (ow_res == OW_PRESENCE_ERR || ow_res == OW_DATA_ERR) {
-	    ret = DS18X20_ERROR_SEARCH_FIRST;
-	}else if(ow_res == OW_LAST_DEVICE){
-	    ret = RESULT_ONLY_ONE_SENSOR;
-	}else{
-	    // Search second sensor
-	    ow_res = ow_rom_search(ow_res, &sensorIdSecond[0] );
-	    if (ow_res == OW_PRESENCE_ERR || ow_res == OW_DATA_ERR) {
-	        ret = DS18X20_ERROR_SEARCH_SECOND;
-	    }
-	    // Hey, man, don't do it for three sensors!!!
-	}
-	return ret;
+    return ret;
 }
 
 /*
@@ -88,22 +85,23 @@ uint8_t DS18X20_IsInProgress(void)
 /*
  * Returns temperature of sensor specified by sensorIndex (mb: FIRST_SENSOR or SECOND_SENSOR)
  */
-uint8_t DS18X20_ReadTemperature(uint16_t *temperature, uint8_t sensorIndex)
+uint16_t DS18X20_ReadTemperature(uint8_t id[])
 {
+    uint16_t temperature = 0xf1f2;
 	uint8_t ret = DS18X20_OK;
 
-	if(sensorIndex == FIRST_SENSOR){
-	    ow_command( DS18X20_READ, &sensorIdFirst[0] );
-	}else if(sensorIndex == SECOND_SENSOR){
-	    ow_command( DS18X20_READ, &sensorIdSecond[0] );
-	}
+	ow_reset();
+
+	ow_command( DS18X20_READ, &id[0] );
+
 	for( uint8_t i = 0; i < DS18X20_SP_SIZE; i++ ) {
 		scratchPad[i] = ow_byte_rd();
 	}
 	if( crc8( &scratchPad[0], DS18X20_SP_SIZE ) ) {
 		ret = DS18X20_ERROR_CRC;
 	}
-	*temperature = ((uint16_t)((uint16_t)scratchPad[1] << 8) | scratchPad[0]);
 
-	return ret;
+	temperature = ((uint16_t)scratchPad[1] << 8) | scratchPad[0];
+
+	return temperature;
 }

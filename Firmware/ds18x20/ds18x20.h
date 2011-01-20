@@ -75,10 +75,10 @@ extern "C" {
 #define DS18X20_DECIMAL_CHAR      '.'
 
 
-extern uint8_t DS18X20_FindSensors(void);
+extern uint8_t DS18X20_FindSensor(uint8_t *ow_res, uint8_t id[]);
 extern uint8_t DS18X20_StartMeasurement(void);
 extern uint8_t DS18X20_IsInProgress(void);
-extern uint8_t DS18X20_ReadTemperature(uint16_t *temperature, uint8_t sensorIndex);
+extern uint16_t DS18X20_ReadTemperature(uint8_t id[]);
 
 
 
