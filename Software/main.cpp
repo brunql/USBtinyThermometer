@@ -63,6 +63,7 @@ static void printUsage()
 // Buffer indexes
 #define BUFF_CMD_INDEX      0
 #define BUFF_LAST_RESULT    6
+#define BUFF_SENSORS_NUMBER_INDEX 7
 
 #define DELAY_BETWEEN_USB_REQUESTS_us  100*1000
 
@@ -150,7 +151,29 @@ int main(int argc, char **argv)
         result = usb_control_msg(handle, USB_ENDPOINT_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE, 0, 0, 0, buffer, sizeof(buffer), 5000);
         if(result == sizeof(buffer)){
             out("OK\n");
+
+            // Check if we have only one sensor, but want to measure from second, tell this fact to user
+            out("Get number of sensors..."); // just simple read buffer[BUFF_SENSORS_NUMBER_INDEX]
+            usleep(DELAY_BETWEEN_USB_REQUESTS_us);
+            buffer[BUFF_CMD_INDEX] = CMD_NOP;
+            result = usb_control_msg(handle, USB_ENDPOINT_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE, 0, 0, 0, buffer, sizeof(buffer), 5000);
+            if(result == sizeof(buffer)){
+                out("OK\n");
+                if(buffer[BUFF_SENSORS_NUMBER_INDEX] == 0){
+                    out("Error: haven't any sensors\n");
+                    exit(5);
+                }else if(measure_sensor_index == SECOND_SENSOR && buffer[BUFF_SENSORS_NUMBER_INDEX] < 2){
+                    out("Error: have only one sensor\n");
+                    exit(5);
+                }
+            }else{
+                // Check number of sensors
+                out("FAIL\n");
+                outFail(result, buffer, usb_strerror());
+                exit(3);
+            }
         }else{
+            // Find sensors
             out("FAIL\n");
             outFail(result, buffer, usb_strerror());
             exit(3);
