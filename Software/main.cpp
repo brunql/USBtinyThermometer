@@ -36,9 +36,6 @@
 #include "version.h"
 
 
-int verbose = 0;
-
-
 static void printUsage()
 {
     fprintf(stderr, "Print to stdout temperature requested from USB device\n");
@@ -60,6 +57,19 @@ static void printUsage()
     fflush(stderr);
 }
 
+
+// Size of the buffer using in usb data transfers
+#define BUFF_SIZE           8
+// Buffer indexes
+#define BUFF_CMD_INDEX      0
+#define BUFF_LAST_RESULT    6
+
+#define DELAY_BETWEEN_USB_REQUESTS_us  100*1000
+
+// Global variable verbose unsing in out(...) and outFail(...) functions
+int verbose = 0;
+
+
 // Output str to stdout if 'verbose' option set
 static void out(const char *str)
 {
@@ -69,17 +79,17 @@ static void out(const char *str)
     }
 }
 
-void outFail(const int usb_control_msg_res, const char buff[8], const char * usb_error_str)
+void outFail(const int usb_control_msg_res, const char buff[BUFF_SIZE], const char * usb_error_str)
 {
     if(verbose){
         printf("  usb_control_msg_res = %d; \n", usb_control_msg_res);
         printf("  usb_error_str = %s; \n", usb_error_str);
         printf("  buffer = ");
-        for(int i=0; i<8; i++){
+        for(int i=0; i<BUFF_SIZE; i++){
             printf("0x%02X ", buff[i] & 0xff);
         }
         printf("\n");
-        printf("  result_last_operation = 0x%02X; \n", (buff[6] & 0xff));
+        printf("  result_last_operation = 0x%02X; \n", (buff[BUFF_LAST_RESULT] & 0xff));
         fflush(stdout);
     }
 }
@@ -87,10 +97,12 @@ void outFail(const int usb_control_msg_res, const char buff[8], const char * usb
 
 int main(int argc, char **argv)
 {
-    char buffer[8];
+    char buffer[BUFF_SIZE];
 
     usb_dev_handle *handle = NULL;
+
     int result = 0;
+
     bool loop_measure = false;
     bool round_to_one_decimal = false;
     int measure_sensor_index = FIRST_SENSOR;
@@ -132,31 +144,25 @@ int main(int argc, char **argv)
 
         out("Find temperature sensors...");
 
-        usleep(200*1000);
+        usleep(DELAY_BETWEEN_USB_REQUESTS_us);
 
-        buffer[0] = CMD_FIND_SENSORS;
+        buffer[BUFF_CMD_INDEX] = CMD_FIND_SENSORS;
         result = usb_control_msg(handle, USB_ENDPOINT_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE, 0, 0, 0, buffer, sizeof(buffer), 5000);
-        if(result == 8){
+        if(result == sizeof(buffer)){
             out("OK\n");
-            usleep(200*1000);
-            result = usb_control_msg(handle, USB_ENDPOINT_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE, 0, 0, 0, buffer, sizeof(buffer), 5000);
-            outFail(result, buffer, usb_strerror());
         }else{
             out("FAIL\n");
             outFail(result, buffer, usb_strerror());
             exit(3);
         }
 
-        usleep(200*1000);
+        usleep(DELAY_BETWEEN_USB_REQUESTS_us);
 
-        out("Start measurement...");        
-        buffer[0] = CMD_START_MEASUREMENT;
+        out("Start measurement...");
+        buffer[BUFF_CMD_INDEX] = CMD_START_MEASUREMENT;
         result = usb_control_msg(handle, USB_ENDPOINT_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE, 0, 0, 0, buffer, sizeof(buffer), 5000);
-        if(result == 8){
+        if(result == sizeof(buffer)){
             out("OK\n");
-            usleep(200*1000);
-            result = usb_control_msg(handle, USB_ENDPOINT_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE, 0, 0, 0, buffer, sizeof(buffer), 5000);
-            outFail(result, buffer, usb_strerror());
         }else{
             out("FAIL\n");
             outFail(result, buffer, usb_strerror());
@@ -164,37 +170,35 @@ int main(int argc, char **argv)
         }
 
         out("Sleep 1 second while measuring...\n");
-        sleep(2);
+        sleep(1);
 
         if(measure_sensor_index == FIRST_SENSOR){
             out("Read temperature from FIRST sensor...");
-            buffer[0] = CMD_READ_TEMPERATURE_FIRST;
+            buffer[BUFF_CMD_INDEX] = CMD_READ_TEMPERATURE_FIRST;
         }else if(measure_sensor_index == SECOND_SENSOR){
             out("Read temperature from SECOND sensor...");
-            buffer[0] = CMD_READ_TEMPERATURE_SECOND;
+            buffer[BUFF_CMD_INDEX] = CMD_READ_TEMPERATURE_SECOND;
         }else{
             fprintf(stderr, "Read temperature from sensor=%d; FAIL", measure_sensor_index);
             exit(4);
         }
+
+        usleep(DELAY_BETWEEN_USB_REQUESTS_us);
         result = usb_control_msg(handle, USB_ENDPOINT_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE, 0, 0, 0, buffer, sizeof(buffer), 5000);
-        if(result == 8){
+        if(result == sizeof(buffer)){
             out("OK\n");
-            usleep(200*1000);
-            result = usb_control_msg(handle, USB_ENDPOINT_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE, 0, 0, 0, buffer, sizeof(buffer), 5000);
-            outFail(result, buffer, usb_strerror());
         }else{
             out("FAIL\n");
             outFail(result, buffer, usb_strerror());
             exit(3);
         }
 
-        usleep(200*1000);
+        usleep(DELAY_BETWEEN_USB_REQUESTS_us);
 
         out("Request temperature...");
         result = usb_control_msg(handle, USB_ENDPOINT_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE, 0, 0, 0, buffer, sizeof(buffer), 5000);
-        if(result == 8){
+        if(result == sizeof(buffer)){
             out("OK\n");
-            outFail(result, buffer, usb_strerror());
         }else{
             out("FAIL\n");
             outFail(result, buffer, usb_strerror());
