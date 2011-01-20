@@ -27,7 +27,7 @@ build/
 .cproject
 .project
 .settings/
-Makefile*
+Makefile
 *.qm
 object_script*
 moc/
